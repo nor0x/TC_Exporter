@@ -1,0 +1,124 @@
+﻿@page "/"
+@inject IJSRuntime js
+
+<section class="nes-container">
+  <section class="message-list">
+    <section class="message -left">
+      <!-- Balloon -->
+        <i class="nes-mario -left"></i>
+        <div class="nes-balloon from-left -right">
+            <p>hello world, how are you!?</p>
+            <p>this app helps me to excelify my project time-trackings...</p>
+            <p class="mini-text">...it will most likely fail for your data</p>
+
+        </div>
+    </section>
+  </section>
+</section>
+
+<div class="nes-container with-title is-centered">
+  <p class="title">drop me some data 👋</p>
+  <p><div class="drag-drop-zone">
+    ...
+    <InputFile OnChange="HandleFileSelected" />
+</div></p>
+</div>
+@if(isProcessing)
+{
+    <div id='loader'></div>
+}
+@if(htmlIsValid)
+{
+    <label for="textarea_field">content...</label>
+    <textarea id="textarea_field" class="nes-textarea code-input">@htmlString</textarea>
+    <button type="button" class="nes-btn is-success export-button" @onclick="GenerateExport">Export</button>
+}
+
+@code 
+{
+    bool htmlIsValid { get; set; } = false;
+    bool isProcessing {get;set;} = true;
+    string htmlString { get; set; } = "...";
+    HtmlDocument doc = new HtmlDocument();
+
+    async void HandleFileSelected(IFileListEntry[] files)
+    {
+        isProcessing = true;
+        StateHasChanged();
+        // Do something with the files, e.g., read them
+        var file = files.FirstOrDefault();
+        var b = true;
+        if(file != null)
+        {
+            var builder = new StringBuilder();
+            using (var reader = new System.IO.StreamReader(file.Data))
+            {
+                htmlString = await reader.ReadToEndAsync();
+                StateHasChanged();
+                CheckHtml();
+            }
+        }
+    }
+
+    void CheckHtml()
+    {
+        Task.Run(() => 
+        {
+            if (htmlString.Contains("dt-cell-content"))
+            {
+                doc.LoadHtml(htmlString);
+                if (doc.ParseErrors.Count() == 0)
+                {
+                    var cells = doc.DocumentNode.SelectNodes("//span[contains(@class, 'dt-cell-content')]");
+                    if (cells.Count == 0)
+                    {
+                        htmlIsValid = false;
+
+                    }
+                    else
+                    {
+                        isProcessing = false;
+                        htmlIsValid = true;
+                    }
+                }
+                else
+                {
+                    htmlIsValid = false;
+
+                }
+            }
+            else
+            {
+                htmlIsValid = false;
+            }
+            StateHasChanged();
+        });
+
+    }
+
+    void GenerateExport()
+    {
+        var columnCount = 8;
+        var currentColumn = 0;
+        var csvBuilder = new StringBuilder();
+
+        var line = "";
+        var cells = doc.DocumentNode.SelectNodes("//span[contains(@class, 'dt-cell-content')]");
+        foreach (var cell in cells)
+        {
+            if (currentColumn == columnCount)
+            {
+                currentColumn = 0;
+                csvBuilder.AppendLine(line);
+                line = "";
+            }
+            line += cell.InnerText + ";";
+
+
+            currentColumn++;
+        }
+
+        var bytes = System.Text.Encoding.UTF8.GetBytes(csvBuilder.ToString());
+        FileUtil.SaveAs(js, "HelloWorld.csv", bytes);
+    }
+}
