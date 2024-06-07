@@ -41,17 +41,17 @@
     string htmlString { get; set; } = "...";
     HtmlDocument doc = new HtmlDocument();
 
-    async void HandleFileSelected(IFileListEntry[] files)
+    async void HandleFileSelected(InputFileChangeEventArgs args)
     {
+        var file = args.File;
         isProcessing = true;
         StateHasChanged();
         // Do something with the files, e.g., read them
-        var file = files.FirstOrDefault();
         var b = true;
         if(file != null)
         {
             var builder = new StringBuilder();
-            using (var reader = new System.IO.StreamReader(file.Data))
+            using (var reader = new System.IO.StreamReader(file.OpenReadStream(99999999999)))
             {
                 htmlString = await reader.ReadToEndAsync();
                 StateHasChanged();

@@ -9,17 +9,30 @@ jobs:
 
     steps:
     - uses: actions/checkout@v1
-    - name: Setup .NET Core
-      uses: actions/setup-dotnet@v1
+
+    
+    - uses: actions/setup-dotnet@v3
+      name: Setup .NET
       with:
-        dotnet-version: 3.1.201
+        dotnet-version: "8.0.x"
+        dotnet-quality: "preview"
+
+    # set base href
+    - name: Replace base-tag in index.html
+      run: |
+        sed -i 's/<base href="\/" \/>/<base href="\/TC_Exporter\/" \/>/g' wwwroot/index.html
+
     - name: Publish with dotnet
       run: dotnet publish --configuration Release --output build
-    - name: Deploy to GitHub Pages
-      uses: JamesIves/github-pages-deploy-action@3.4.6
+
+    
+      # add .nojekyll file to tell GitHub pages to not treat this as a Jekyll project. (Allow files and folders starting with an underscore)
+    - name: Add .nojekyll file
+      run: touch build/wwwroot/.nojekyll
+
+    - name: Commit wwwroot to GitHub Pages
+      uses: JamesIves/github-pages-deploy-action@v4.4.1
       with:
-        ACCESS_TOKEN: ${{ secrets.ACCESS_TOKEN }}
-        BASE_BRANCH: master # The branch the action should deploy from.
-        BRANCH: gh-pages # The branch the action should deploy to.
-        FOLDER: build/wwwroot # The folder the action should deploy.
-        CLEAN: true
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        BRANCH: gh-pages
+        FOLDER: build/wwwroot
